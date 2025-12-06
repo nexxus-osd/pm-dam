@@ -1,0 +1,75 @@
+{
+    "name": "pm-dam-system",
+    "version": "1.0.0",
+    "description": "Sistema de Gestión de Proyectos y Activos Digitales",
+    "main": "index.js",
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:push": "prisma db push",
+        "db:seed": "tsx prisma/seed.ts",
+        "db:studio": "prisma studio",
+        "db:reset": "prisma migrate reset",
+        "test": "vitest",
+        "test:ui": "vitest --ui",
+        "type-check": "tsc --noEmit"
+    },
+    "keywords": [
+        "project-management",
+        "digital-asset-management",
+        "dam",
+        "pm",
+        "ai-tools",
+        "workflow"
+    ],
+    "author": "PM/DAM Team",
+    "license": "MIT",
+    "dependencies": {
+        "@hookform/resolvers": "^5.2.2",
+        "@prisma/client": "^5.7.0",
+        "@radix-ui/react-dialog": "^1.1.15",
+        "@radix-ui/react-dropdown-menu": "^2.1.16",
+        "@radix-ui/react-label": "^2.1.8",
+        "@radix-ui/react-slot": "^1.2.4",
+        "@radix-ui/react-toast": "^1.2.15",
+        "@supabase/supabase-js": "^2.86.2",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.0.0",
+        "date-fns": "^3.0.0",
+        "framer-motion": "^12.23.25",
+        "lucide-react": "^0.556.0",
+        "next": "^16.0.7",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-hook-form": "^7.68.0",
+        "react-quill": "^2.0.0",
+        "tailwind-merge": "^2.2.0",
+        "zod": "^3.22.4",
+        "zustand": "^4.4.7"
+    },
+    "devDependencies": {
+        "@types/node": "^20.10.6",
+        "@types/react": "^18.2.46",
+        "@types/react-dom": "^18.2.18",
+        "autoprefixer": "^10.4.16",
+        "eslint": "^8.56.0",
+        "eslint-config-next": "^14.0.4",
+        "postcss": "^8.4.32",
+        "prisma": "^5.7.0",
+        "tailwindcss": "^3.4.0",
+        "tsx": "^4.7.0",
+        "typescript": "^5.3.3",
+        "vitest": "^1.1.0"
+    },
+    "prisma": {
+        "seed": "tsx prisma/seed.ts"
+    },
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=9.0.0"
+    }
+}

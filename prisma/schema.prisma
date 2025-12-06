@@ -1,0 +1,541 @@
+// ============================================================
+// 🗄️ PRISMA SCHEMA - PM/DAM SYSTEM
+// Database: SQLite (Migrado por solicitud)
+// ORM: Prisma
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// NOTA: SQLite no soporta Enums ni Arrays escalares. 
+// Se han convertido a String. Los arrays deben guardarse como JSON string o CSV.
+
+// ============================================================
+// DB 0: USUARIOS
+// ============================================================
+
+model Usuario {
+  id                String         @id @default(uuid())
+  nombre            String
+  email             String         @unique
+  avatar_url        String?
+  rol               String         // Enum RolUsuario
+  departamento      String?
+  activo            Boolean        @default(true)
+  fecha_registro    DateTime       @default(now())
+  ultimo_acceso     DateTime?
+  
+  // Preferencias (JSON)
+  preferencias      String?        // Json es soportado pero a veces mejor string en sqlite simple? No, Prisma soporta Json en sqlite.
+  
+  // Relaciones
+  proyectos_responsable Proyecto[]  @relation("ProyectoResponsable")
+  proyectos_equipo      ProyectoUsuario[]
+  tareas_asignadas      Tarea[]     @relation("TareaAsignada")
+  tareas_observadas     TareaObservador[]
+  comentarios           Comentario[]
+  activos_creados       ActivoDigital[] @relation("ActivoCreador")
+  transacciones_creadas Transaccion[] @relation("TransaccionCreador")
+  transacciones_aprobadas Transaccion[] @relation("TransaccionAprobador")
+  herramientas_agregadas HerramientaAI[]
+  
+  @@map("usuarios")
+}
+
+// ============================================================
+// DB 1: PROYECTOS
+// ============================================================
+
+model Proyecto {
+  id                    String          @id @default(uuid())
+  nombre                String
+  descripcion           String
+  tipo_activo           String          // Enum TipoActivo
+  
+  // Fechas
+  fecha_inicio          DateTime
+  fecha_deadline        DateTime
+  fecha_creacion        DateTime        @default(now())
+  fecha_actualizacion   DateTime        @updatedAt
+  
+  // Estado
+  estado                String          @default("PLANEANDO") // Enum EstadoProyecto
+  prioridad             String          @default("MEDIA")     // Enum Prioridad
+  
+  // Responsabilidad
+  responsable_id        String
+  responsable           Usuario         @relation("ProyectoResponsable", fields: [responsable_id], references: [id])
+  equipo                ProyectoUsuario[]
+  
+  // Progreso (Calculado)
+  progreso_total        Float           @default(0)
+  total_tareas          Int             @default(0)
+  tareas_completadas    Int             @default(0)
+  tareas_en_progreso    Int             @default(0)
+  tareas_bloqueadas     Int             @default(0)
+  
+  // Finanzas
+  presupuesto_asignado  Decimal         @default(0)
+  gastos_acumulados     Decimal         @default(0)
+  ingresos_totales      Decimal         @default(0)
+  balance_restante      Decimal         @default(0)
+  roi_preliminar        Float           @default(0)
+  ingresos_estimados    Decimal         @default(0)
+  
+  // Activos (Calculado)
+  activos_generados     Int             @default(0)
+  
+  // AI (Calculado)
+  costo_ai_total        Decimal         @default(0)
+  
+  // Metadatos
+  etiquetas             String          @default("[]") // String[] convertido a JSON String
+  notas                 String?
+  archivos_adjuntos     String          @default("[]") // String[] convertido a JSON String
+  
+  // Campos personalizados (JSON)
+  campos_personalizados String?         // Json
+  
+  // Relaciones
+  tareas                Tarea[]
+  transacciones         Transaccion[]
+  activos               ActivoDigital[]
+  workflows             ProyectoWorkflow[]
+  
+  @@index([estado])
+  @@index([tipo_activo])
+  @@index([responsable_id])
+  @@index([fecha_deadline])
+  @@map("proyectos")
+}
+
+// Tabla intermedia para relación muchos-a-muchos Proyecto-Usuario
+model ProyectoUsuario {
+  id          String   @id @default(uuid())
+  proyecto_id String
+  usuario_id  String
+  rol         String?  // Rol en el proyecto específico
+  
+  proyecto    Proyecto @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  usuario     Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  
+  @@unique([proyecto_id, usuario_id])
+  @@map("proyectos_usuarios")
+}
+
+// ============================================================
+// DB 2: TAREAS
+// ============================================================
+
+model Tarea {
+  id                    String          @id @default(uuid())
+  
+  // Relaciones principales
+  proyecto_id           String
+  proyecto              Proyecto        @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  
+  tarea_padre_id        String?
+  tarea_padre           Tarea?          @relation("SubtareasPadre", fields: [tarea_padre_id], references: [id])
+  subtareas             Tarea[]         @relation("SubtareasPadre")
+  
+  // Información básica
+  nombre                String
+  descripcion           String
+  tipo_tarea            String          // Enum TipoTarea
+  estado                String          @default("POR_HACER") // Enum EstadoTarea
+  prioridad             String          @default("MEDIA")     // Enum Prioridad
+  
+  // Asignación
+  asignado_a_id         String?
+  asignado_a            Usuario?        @relation("TareaAsignada", fields: [asignado_a_id], references: [id])
+  observadores          TareaObservador[]
+  
+  // Fechas
+  fecha_inicio          DateTime?
+  fecha_vencimiento     DateTime?
+  fecha_creacion        DateTime        @default(now())
+  fecha_actualizacion   DateTime        @updatedAt
+  fecha_completado      DateTime?
+  
+  // Tiempo
+  tiempo_estimado       Float?
+  tiempo_real           Float?
+  eficiencia            Float?
+  
+  // Progreso de subtareas (Calculado)
+  total_subtareas       Int             @default(0)
+  subtareas_completadas Int             @default(0)
+  progreso_subtareas    Float           @default(0)
+  
+  // Dependencias
+  bloqueadores          String?
+  
+  // AI
+  costo_ai              Decimal         @default(0)
+  
+  // Checklist (JSON Array)
+  checklist             String?         // Json
+  
+  // Metadatos
+  etiquetas             String          @default("[]") // String[]
+  archivos_adjuntos     String          @default("[]") // String[]
+  posicion_kanban       Int?
+  
+  // Relaciones
+  herramientas_ai       TareaHerramientaAI[]
+  activos_generados     ActivoDigital[]
+  comentarios           Comentario[]
+  dependencias_origen   TareaDependencia[] @relation("TareaOrigen")
+  dependencias_destino  TareaDependencia[] @relation("TareaDestino")
+  transacciones         Transaccion[]
+  
+  @@index([proyecto_id])
+  @@index([tarea_padre_id])
+  @@index([estado])
+  @@index([asignado_a_id])
+  @@index([fecha_vencimiento])
+  @@map("tareas")
+}
+
+// Tabla intermedia para observadores de tareas
+model TareaObservador {
+  id         String @id @default(uuid())
+  tarea_id   String
+  usuario_id String
+  
+  tarea      Tarea  @relation(fields: [tarea_id], references: [id], onDelete: Cascade)
+  usuario    Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  
+  @@unique([tarea_id, usuario_id])
+  @@map("tareas_observadores")
+}
+
+// Tabla para dependencias entre tareas
+model TareaDependencia {
+  id              String @id @default(uuid())
+  tarea_origen_id String
+  tarea_destino_id String
+  
+  tarea_origen    Tarea  @relation("TareaOrigen", fields: [tarea_origen_id], references: [id], onDelete: Cascade)
+  tarea_destino   Tarea  @relation("TareaDestino", fields: [tarea_destino_id], references: [id], onDelete: Cascade)
+  
+  @@unique([tarea_origen_id, tarea_destino_id])
+  @@map("tareas_dependencias")
+}
+
+// Modelo para comentarios
+model Comentario {
+  id         String   @id @default(uuid())
+  tarea_id   String
+  usuario_id String
+  texto      String
+  fecha      DateTime @default(now())
+  editado    Boolean  @default(false)
+  
+  tarea      Tarea    @relation(fields: [tarea_id], references: [id], onDelete: Cascade)
+  usuario    Usuario  @relation(fields: [usuario_id], references: [id])
+  
+  @@index([tarea_id])
+  @@map("comentarios")
+}
+
+// ============================================================
+// DB 3: WORKFLOWS
+// ============================================================
+
+model Workflow {
+  id                 String            @id @default(uuid())
+  nombre             String
+  tipo_proyecto      String            // Enum TipoActivo
+  descripcion        String
+  
+  // Estructura (JSON)
+  fases              String            // Json
+  plantilla_tareas   String            // Json
+  
+  // Metadatos
+  activo             Boolean           @default(true)
+  veces_usado        Int               @default(0)
+  fecha_creacion     DateTime          @default(now())
+  creado_por         String
+  ultima_actualizacion DateTime        @updatedAt
+  
+  // Relaciones
+  proyectos          ProyectoWorkflow[]
+  
+  @@map("workflows")
+}
+
+// Relación Proyecto-Workflow
+model ProyectoWorkflow {
+  id          String   @id @default(uuid())
+  proyecto_id String
+  workflow_id String
+  aplicado_en DateTime @default(now())
+  
+  proyecto    Proyecto @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  workflow    Workflow @relation(fields: [workflow_id], references: [id])
+  
+  @@unique([proyecto_id, workflow_id])
+  @@map("proyectos_workflows")
+}
+
+// ============================================================
+// DB 4: INVENTARIO DE ACTIVOS (DAM)
+// ============================================================
+
+model ActivoDigital {
+  id                  String            @id @default(uuid())
+  nombre              String
+  tipo_activo         String            // Enum TipoActivoDigital
+  categoria           String
+  
+  // Archivo
+  formato             String
+  tamano              Float             // MB
+  url_archivo         String
+  thumbnail_url       String?
+  
+  // Descripción
+  descripcion         String
+  alt_text            String?
+  
+  // Relaciones
+  proyecto_id         String
+  proyecto            Proyecto          @relation(fields: [proyecto_id], references: [id])
+  
+  tarea_id            String?
+  tarea               Tarea?            @relation(fields: [tarea_id], references: [id])
+  
+  // Autoría
+  creado_por_id       String
+  creado_por          Usuario           @relation("ActivoCreador", fields: [creado_por_id], references: [id])
+  fecha_creacion      DateTime          @default(now())
+  ultima_modificacion DateTime          @updatedAt
+  modificado_por_id   String?
+  
+  // Derechos
+  derechos_uso        String            // Enum DerechosUso
+  licencia            String            // Enum TipoLicencia
+  detalles_licencia   String?
+  proveedor           String?
+  costo_adquisicion   Decimal?
+  fecha_expiracion    DateTime?
+  
+  // Metadatos técnicos
+  dimensiones         String?
+  duracion            Float?
+  resolucion          String?
+  espacio_color       String?
+  codec               String?
+  
+  // Organización
+  etiquetas           String            @default("[]") // String[]
+  version             String            @default("1.0")
+  estado              String            @default("DRAFT") // Enum EstadoActivo
+  favorito            Boolean           @default(false)
+  veces_usado         Int               @default(0)
+  coleccion           String?
+  serie               String?
+  notas               String?
+  
+  // Relaciones
+  transacciones       Transaccion[]
+  
+  @@index([proyecto_id])
+  @@index([tarea_id])
+  @@index([tipo_activo])
+  @@index([estado])
+  @@index([favorito])
+  @@map("activos_digitales")
+}
+
+// ============================================================
+// DB 5: FINANZAS
+// ============================================================
+
+model Transaccion {
+  id                  String              @id @default(uuid())
+  
+  // Relaciones
+  proyecto_id         String
+  proyecto            Proyecto            @relation(fields: [proyecto_id], references: [id])
+  
+  tarea_id            String?
+  tarea               Tarea?              @relation(fields: [tarea_id], references: [id])
+  
+  herramienta_ai_id   String?
+  herramienta_ai      HerramientaAI?      @relation(fields: [herramienta_ai_id], references: [id])
+  
+  activo_id           String?
+  activo              ActivoDigital?      @relation(fields: [activo_id], references: [id])
+  
+  // Información básica
+  tipo_transaccion    String              // Enum TipoTransaccion
+  categoria           String              // Enum CategoriaFinanciera
+  concepto            String
+  
+  // Monto
+  monto               Decimal
+  moneda              String              @default("USD")
+  tasa_cambio         Float?
+  
+  // Fecha y método
+  fecha_transaccion   DateTime
+  metodo_pago         String?             // Enum MetodoPago
+  estado              String              @default("PENDIENTE") // Enum EstadoTransaccion
+  
+  // Recurrencia
+  recurrente          Boolean             @default(false)
+  frecuencia          String?             // Enum FrecuenciaRecurrencia
+  proxima_fecha       DateTime?
+  
+  // Proveedor
+  proveedor           String?
+  factura_url         String?
+  numero_factura      String?
+  
+  // Aprobación
+  aprobado_por_id     String?
+  aprobado_por        Usuario?            @relation("TransaccionAprobador", fields: [aprobado_por_id], references: [id])
+  fecha_aprobacion    DateTime?
+  requiere_aprobacion Boolean             @default(false)
+  
+  // Metadatos
+  notas               String?
+  etiquetas           String            @default("[]") // String[]
+  fecha_creacion      DateTime            @default(now())
+  creado_por_id       String
+  creado_por          Usuario             @relation("TransaccionCreador", fields: [creado_por_id], references: [id])
+  
+  @@index([proyecto_id])
+  @@index([tipo_transaccion])
+  @@index([estado])
+  @@index([fecha_transaccion])
+  @@index([herramienta_ai_id])
+  @@map("transacciones")
+}
+
+// ============================================================
+// DB E: AI DIRECTORY
+// ============================================================
+
+model HerramientaAI {
+  id                    String              @id @default(uuid())
+  nombre                String
+  categoria             String              // CategoriaAI[] se convierte a String (JSON array)
+  descripcion           String
+  
+  // Enlaces
+  url                   String
+  logo_url              String?
+  url_documentacion     String?
+  
+  // Precio
+  tipo_precio           String              // Enum TipoPrecioAI
+  costo_mensual         Decimal?
+  costo_anual           Decimal?
+  costo_por_uso         Decimal?
+  unidad_uso            String?
+  moneda                String              @default("USD")
+  
+  // Suscripción
+  plan_actual           String?
+  fecha_suscripcion     DateTime?
+  fecha_renovacion      DateTime?
+  estado_suscripcion    String?             // Enum EstadoSuscripcion
+  
+  // Métricas (Calculado)
+  veces_usada           Int                 @default(0)
+  costo_total_gastado   Decimal             @default(0)
+  roi_herramienta       Float?
+  tiempo_ahorrado_estimado Float?
+  productividad_ganada  Float?
+  
+  // Características (JSON)
+  caracteristicas       String           @default("[]") // String[]
+  limitaciones          String?
+  casos_uso             String           @default("[]") // String[]
+  
+  // Evaluación
+  rating                Float               @default(0)
+  reviews               String?
+  notas                 String?
+  
+  // Metadatos
+  favorita              Boolean             @default(false)
+  etiquetas             String           @default("[]") // String[]
+  fecha_agregada        DateTime            @default(now())
+  agregado_por_id       String
+  agregado_por          Usuario             @relation(fields: [agregado_por_id], references: [id])
+  activa                Boolean             @default(true)
+  
+  // Integración
+  tiene_api             Boolean             @default(false)
+  url_api               String?
+  api_key               String?             // Encriptada
+  
+  // Relaciones
+  tareas                TareaHerramientaAI[]
+  alternativas_origen   AlternativaAI[]     @relation("AlternativaOrigen")
+  alternativas_destino  AlternativaAI[]     @relation("AlternativaDestino")
+  transacciones         Transaccion[]
+  
+  @@index([nombre])
+  @@index([favorita])
+  @@index([activa])
+  @@map("herramientas_ai")
+}
+
+// Tabla intermedia Tarea-HerramientaAI
+model TareaHerramientaAI {
+  id              String        @id @default(uuid())
+  tarea_id        String
+  herramienta_id  String
+  
+  tarea           Tarea         @relation(fields: [tarea_id], references: [id], onDelete: Cascade)
+  herramienta     HerramientaAI @relation(fields: [herramienta_id], references: [id], onDelete: Cascade)
+  
+  @@unique([tarea_id, herramienta_id])
+  @@map("tareas_herramientas_ai")
+}
+
+// Tabla para alternativas de herramientas AI
+model AlternativaAI {
+  id                   String        @id @default(uuid())
+  herramienta_origen_id String
+  herramienta_destino_id String
+  
+  herramienta_origen   HerramientaAI @relation("AlternativaOrigen", fields: [herramienta_origen_id], references: [id], onDelete: Cascade)
+  herramienta_destino  HerramientaAI @relation("AlternativaDestino", fields: [herramienta_destino_id], references: [id], onDelete: Cascade)
+  
+  @@unique([herramienta_origen_id, herramienta_destino_id])
+  @@map("alternativas_ai")
+}
+
+// ============================================================
+// TABLA DE NOTIFICACIONES
+// ============================================================
+
+model Notificacion {
+  id            String   @id @default(uuid())
+  tipo          String
+  titulo        String
+  mensaje       String
+  destinatario_id String
+  leida         Boolean  @default(false)
+  fecha         DateTime @default(now())
+  enlace        String?
+  metadata      String?  // Json
+  
+  @@index([destinatario_id])
+  @@index([leida])
+  @@index([fecha])
+  @@map("notificaciones")
+}
