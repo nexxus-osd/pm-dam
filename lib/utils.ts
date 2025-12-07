@@ -17,10 +17,15 @@ export function cn(...inputs: ClassValue[]) {
  * Formatear moneda
  */
 export function formatCurrency(amount: number, currency: string = 'USD'): string {
-    return new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency,
-    }).format(amount);
+    // Solo formatear en el cliente para evitar problemas de hidratación
+    if (typeof window !== 'undefined') {
+        return new Intl.NumberFormat('es-MX', {
+            style: 'currency',
+            currency,
+        }).format(amount);
+    }
+    // Formato básico en el servidor
+    return `${amount} ${currency}`;
 }
 
 /**
@@ -40,15 +45,21 @@ export function formatDate(date: Date | string, format: 'short' | 'long' | 'rela
         return formatRelativeDate(d);
     }
 
-    if (format === 'long') {
+    // Solo formatear con Intl.DateTimeFormat en el cliente para evitar problemas de hidratación
+    if (typeof window !== 'undefined') {
+        if (format === 'long') {
+            return new Intl.DateTimeFormat('es-MX', {
+                dateStyle: 'full',
+            }).format(d);
+        }
+
         return new Intl.DateTimeFormat('es-MX', {
-            dateStyle: 'full',
+            dateStyle: 'medium',
         }).format(d);
     }
-
-    return new Intl.DateTimeFormat('es-MX', {
-        dateStyle: 'medium',
-    }).format(d);
+    
+    // Formato básico en el servidor
+    return d.toISOString();
 }
 
 /**
@@ -175,7 +186,12 @@ export function debounce<T extends (...args: any[]) => any>(
  * Generar ID único
  */
 export function generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Para evitar problemas de hidratación, solo generar IDs en el cliente
+    if (typeof window !== 'undefined') {
+        return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+    // En el servidor, devolver un placeholder
+    return 'temp-id';
 }
 
 /**
@@ -210,6 +226,12 @@ export function pluralize(word: string, count: number): string {
  * Copiar al portapapeles
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
+    // Solo ejecutar en el cliente
+    if (typeof window === 'undefined' || !navigator.clipboard) {
+        console.warn('Clipboard API not available');
+        return false;
+    }
+    
     try {
         await navigator.clipboard.writeText(text);
         return true;
@@ -223,12 +245,17 @@ export async function copyToClipboard(text: string): Promise<boolean> {
  * Descargar archivo
  */
 export function downloadFile(url: string, filename: string): void {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Solo ejecutar en el cliente para evitar problemas de hidratación
+    if (typeof window !== 'undefined') {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else {
+        console.warn('downloadFile solo se puede ejecutar en el cliente');
+    }
 }
 
 /**

@@ -1,15 +1,17 @@
 'use client'
 
-import { MoreVertical, Trash, Edit, Eye } from "lucide-react";
+import { MoreVertical, Trash, Edit, Eye, CheckCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { deleteProyectoAction } from "@/app/actions/proyectos";
 import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { EditarProyectoDialog } from "@/components/proyectos/editar-proyecto-dialog";
+import { ProyectoPreviewDialog } from "@/components/proyectos/proyecto-preview-dialog";
 
 export function ProyectoCardActions({ id, proyecto }: { id: string; proyecto: any }) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
     const router = useRouter();
 
     async function handleDelete() {
@@ -31,6 +33,10 @@ export function ProyectoCardActions({ id, proyecto }: { id: string; proyecto: an
         router.refresh();
     };
 
+    const handleViewTasks = () => {
+        router.push(`/proyectos/${id}`);
+    };
+
     return (
         <>
             <DropdownMenu>
@@ -44,8 +50,11 @@ export function ProyectoCardActions({ id, proyecto }: { id: string; proyecto: an
                     </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => router.push(`/proyectos/${id}`)}>
+                    <DropdownMenuItem onClick={() => setIsPreviewDialogOpen(true)}>
                         <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleViewTasks}>
+                        <CheckCircle className="mr-2 h-4 w-4" /> Tareas
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                         <Edit className="mr-2 h-4 w-4" /> Editar
@@ -61,6 +70,11 @@ export function ProyectoCardActions({ id, proyecto }: { id: string; proyecto: an
                 onOpenChange={setIsEditDialogOpen}
                 onSuccess={handleEditSuccess}
             />
+            <ProyectoPreviewDialog
+                proyecto={proyecto}
+                open={isPreviewDialogOpen}
+                onOpenChange={setIsPreviewDialogOpen}
+            />
         </>
-    )
+    );
 }

@@ -14,14 +14,31 @@ import type {
 } from '@/lib/validations/herramienta-ai';
 import { parseJsonArray } from '@/lib/enums_polyfill';
 
+// Helper para transformar y serializar objetos de Prisma
+const serializeDecimal = (value: any) => {
+    if (typeof value === 'object' && value !== null && 'toNumber' in value) {
+        return value.toNumber();
+    }
+    return value;
+};
+
 // Helper para transformar
 const transformHerramienta = (h: any): any => {
     if (!h) return null;
+    
+    // Convertir todos los valores Decimal a números regulares
+    const serializedHerramienta: any = {};
+    for (const key in h) {
+        if (h.hasOwnProperty(key)) {
+            serializedHerramienta[key] = serializeDecimal(h[key]);
+        }
+    }
+    
     return {
-        ...h,
-        categoria: parseJsonArray(h.categoria),
-        caracteristicas: parseJsonArray(h.caracteristicas),
-        casos_uso: parseJsonArray(h.casos_uso),
+        ...serializedHerramienta,
+        categoria: parseJsonArray(serializedHerramienta.categoria),
+        caracteristicas: parseJsonArray(serializedHerramienta.caracteristicas),
+        casos_uso: parseJsonArray(serializedHerramienta.casos_uso),
     };
 };
 
@@ -149,15 +166,20 @@ export class HerramientaAIService {
             activa,
             tiene_api,
             busqueda,
-            page,
-            limit,
-            orderBy,
-            order,
+            page = 1,
+            limit = 20,
+            orderBy = 'fecha_agregada',
+            order = 'desc',
         } = filtros;
 
         const where: any = {};
 
-        // Filtros simples compatibles directo con Prisma
+        if (categoria && categoria.length > 0) {
+            where.categoria = {
+                contains: `"${categoria}"`, // Búsqueda en array JSON
+            };
+        }
+
         if (tipo_precio && tipo_precio.length > 0) {
             where.tipo_precio = { in: tipo_precio };
         }
@@ -180,46 +202,32 @@ export class HerramientaAIService {
 
         if (busqueda) {
             where.OR = [
-                { nombre: { contains: busqueda } }, // mode insensitive removido
-                { descripcion: { contains: busqueda } },
-                { casos_uso: { contains: busqueda } }, // Busqueda en String JSON
+                { nombre: { contains: busqueda, mode: 'insensitive' } },
+                { descripcion: { contains: busqueda, mode: 'insensitive' } },
+                { url: { contains: busqueda, mode: 'insensitive' } },
             ];
         }
 
-        // Recuperar TODAS las herramientas que cumplan filtros básicos y paginar en memoria si hay filtros de array complejos
-        // Ojo: Si 'categoria' está presente, no podemos filtrarla en DB fácilmente.
-        // Estrategia: Si hay filtro de categoría, traemos mas o todas y filtramos en JS.
-        // Dado el scope pequeño, traeremos todas las que cumplan el 'where' parcial.
-
-        const herramientasRaw = await prisma.herramientaAI.findMany({
+        const herramientas = await prisma.herramientaAI.findMany({
             where,
             orderBy: { [orderBy]: order },
+            skip: (page - 1) * limit,
+            take: limit,
         });
 
-        let herramientas = herramientasRaw.map(transformHerramienta);
+        const total = await prisma.herramientaAI.count({ where });
 
-        // Filtrado en memoria para Arrays (Categoria)
-        if (categoria && categoria.length > 0) {
-            herramientas = herramientas.filter((h: any) =>
-                h.categoria.some((c: string) => categoria.includes(c as any))
-            );
-        }
-
-        const totalFiltered = herramientas.length;
-
-        // Paginación manual en memoria
-        const start = (page - 1) * limit;
-        const pagedHerramientas = herramientas.slice(start, start + limit);
-
-        // Count total real en DB (aproximación si no filtramos por categoría)
-        // Para consistencia con paginación en memoria, usamos totalFiltered
+        // Transformar todas las herramientas para serializar correctamente los Decimals
+        const herramientasTransformadas = herramientas.map(transformHerramienta);
 
         return {
-            herramientas: pagedHerramientas,
-            total: totalFiltered,
-            page,
-            limit,
-            totalPages: Math.ceil(totalFiltered / limit),
+            herramientas: herramientasTransformadas,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
         };
     }
 
@@ -427,7 +435,6 @@ export class HerramientaAIService {
         });
     }
 
-    // ... getRecomendaciones y toggleFavorita se mantienen igual ...
     /**
      * Obtener recomendaciones de herramientas
      * Basado en el proyecto y sus necesidades

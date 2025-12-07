@@ -44,6 +44,8 @@ model Usuario {
   transacciones_creadas Transaccion[] @relation("TransaccionCreador")
   transacciones_aprobadas Transaccion[] @relation("TransaccionAprobador")
   herramientas_agregadas HerramientaAI[]
+  carpetas_creadas      Carpeta[]     @relation("CarpetaCreador")
+  documentos_creados    Documento[]   @relation("DocumentoCreador")
   
   @@map("usuarios")
 }
@@ -107,6 +109,8 @@ model Proyecto {
   transacciones         Transaccion[]
   activos               ActivoDigital[]
   workflows             ProyectoWorkflow[]
+  carpetas              Carpeta[]       // Nueva relación para carpetas
+  documentos            Documento[]     @relation("DocumentoProyecto")
   
   @@index([estado])
   @@index([tipo_activo])
@@ -420,6 +424,65 @@ model Transaccion {
   @@index([fecha_transaccion])
   @@index([herramienta_ai_id])
   @@map("transacciones")
+}
+
+// ============================================================
+// DB 6: CARPETAS
+// ============================================================
+
+model Carpeta {
+  id              String      @id @default(uuid())
+  nombre          String
+  descripcion     String?
+  proyecto_id     String
+  proyecto        Proyecto    @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  
+  // Jerarquía de carpetas
+  carpeta_padre_id String?
+  carpeta_padre   Carpeta?    @relation("Subcarpetas", fields: [carpeta_padre_id], references: [id])
+  subcarpetas     Carpeta[]   @relation("Subcarpetas")
+  
+  // Documentos en la carpeta
+  documentos      Documento[]
+  
+  // Metadatos
+  fecha_creacion  DateTime    @default(now())
+  fecha_actualizacion DateTime  @updatedAt
+  creada_por_id   String
+  creada_por      Usuario     @relation("CarpetaCreador", fields: [creada_por_id], references: [id])
+  
+  @@index([proyecto_id])
+  @@index([carpeta_padre_id])
+  @@map("carpetas")
+}
+
+model Documento {
+  id              String      @id @default(uuid())
+  nombre          String
+  descripcion     String?
+  tipo_documento  String      // Enum TipoDocumento (PDF, DOC, TXT, etc.)
+  
+  // Contenido
+  contenido       String?     // Para notas de texto
+  nombre_archivo  String?     // Nombre del archivo subido
+  tipo_archivo    String?     // MIME type
+  tamano_archivo  Int?        // Tamaño en bytes
+  
+  // Relaciones
+  carpeta_id      String?
+  carpeta         Carpeta?    @relation(fields: [carpeta_id], references: [id], onDelete: SetNull)
+  proyecto_id     String
+  proyecto        Proyecto    @relation("DocumentoProyecto", fields: [proyecto_id], references: [id], onDelete: Cascade)
+  
+  // Metadatos
+  fecha_creacion  DateTime    @default(now())
+  fecha_actualizacion DateTime  @updatedAt
+  creada_por_id   String
+  creada_por      Usuario     @relation("DocumentoCreador", fields: [creada_por_id], references: [id])
+  
+  @@index([proyecto_id])
+  @@index([carpeta_id])
+  @@map("documentos")
 }
 
 // ============================================================

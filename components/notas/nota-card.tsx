@@ -22,6 +22,17 @@ export function NotaCard({
   onEditar,
   onEliminar
 }: NotaCardProps) {
+  // Formatear la fecha de manera segura para evitar problemas de hidratación
+  const formattedDate = typeof window !== 'undefined' 
+    ? new Date(fecha).toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : new Date(fecha).toISOString(); // Usar formato ISO en el servidor
+
   return (
     <div className={`${color} border rounded-lg p-4 hover:shadow-md transition-shadow h-full flex flex-col`}>
       <div className="flex items-start justify-between mb-2">
@@ -49,13 +60,7 @@ export function NotaCard({
         {contenido}
       </p>
       <p className="text-xs text-muted-foreground mt-3">
-        {new Date(fecha).toLocaleDateString('es-ES', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })}
+        {formattedDate}
       </p>
     </div>
   );

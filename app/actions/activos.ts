@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { ActivoDigitalService } from '@/lib/services/activo-digital.service';
 import { CreateActivoDigitalSchema } from '@/lib/validations/activo-digital';
 import prisma from '@/lib/prisma';
+import { generateId } from '@/lib/utils'; // Importar la función segura de generación de IDs
 
 export async function createActivoDigitalAction(data: any): Promise<{ success: boolean; error?: string }> {
     try {
@@ -27,10 +28,10 @@ export async function createActivoDigitalAction(data: any): Promise<{ success: b
         }
 
         if (data.tipo_activo === 'DOCUMENTO' && !data.url_archivo) {
-            // Generar una URL única basada en el nombre y timestamp
-            const timestamp = Date.now();
+            // Generar una URL única basada en el nombre y un ID seguro
+            const fileId = generateId(); // Usar una función segura para generar IDs
             const fileName = data.nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
-            data.url_archivo = `/assets/${data.categoria.toLowerCase()}/${fileName}-${timestamp}.${data.formato.toLowerCase()}`;
+            data.url_archivo = `/assets/${data.categoria.toLowerCase()}/${fileName}-${fileId}.${data.formato.toLowerCase()}`;
         }
 
         // Asegurar valores por defecto para otros campos requeridos

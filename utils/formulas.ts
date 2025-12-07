@@ -144,7 +144,9 @@ export function calcularCostoAI(
     const herramientasUsadas = new Set<string>();
 
     tareas.forEach((tarea) => {
-        tarea.herramientas_ai.forEach((id: string) => herramientasUsadas.add(id));
+        // Asegurarse de que herramientas_ai sea un array antes de iterar
+        const herramientasAi = Array.isArray(tarea.herramientas_ai) ? tarea.herramientas_ai : [];
+        herramientasAi.forEach((id: string) => herramientasUsadas.add(id));
     });
 
     // Sumar costos
@@ -180,16 +182,13 @@ export function actualizarProyectoConRollups(
         tareas_en_progreso: conteos['EN_PROGRESO'] || 0,
         tareas_bloqueadas: conteos['BLOQUEADO'] || 0,
         progreso_total: calcularProgresoPonderado(tareas),
-
         // Finanzas
         gastos_acumulados: gastos_acumulados as any,
         ingresos_totales: ingresos_totales as any,
         balance_restante: balance_restante as any,
         roi_preliminar: calcularROI(toNumber(proyecto.ingresos_estimados), gastos_acumulados),
-
         // Activos
         activos_generados: activos.length,
-
         // AI
         costo_ai_total: calcularCostoAI(tareas, herramientas) as any,
     };
@@ -227,7 +226,9 @@ export function calcularCostoAITarea(
 ): Currency {
     let costo = 0;
 
-    tarea.herramientas_ai.forEach((herramientaId: string) => {
+    // Asegurarse de que herramientas_ai sea un array antes de iterar
+    const herramientasAi = Array.isArray(tarea.herramientas_ai) ? tarea.herramientas_ai : [];
+    herramientasAi.forEach((herramientaId: string) => {
         const herramienta = herramientas.find((h) => h.id === herramientaId);
         if (herramienta?.costo_mensual) {
             costo += toNumber(herramienta.costo_mensual);
@@ -246,9 +247,11 @@ export function verificarDependenciasBloqueadas(
     tarea: Tarea,
     todasTareas: Tarea[]
 ): boolean {
-    if (tarea.dependencias_ids.length === 0) return false;
+    // Asegurarse de que dependencias_ids sea un array antes de acceder a su longitud
+    const dependenciasIds = Array.isArray(tarea.dependencias_ids) ? tarea.dependencias_ids : [];
+    if (dependenciasIds.length === 0) return false;
 
-    return tarea.dependencias_ids.some((depId: string) => {
+    return dependenciasIds.some((depId: string) => {
         const dependencia = todasTareas.find((t) => t.id === depId);
         return dependencia?.estado !== 'COMPLETADO';
     });
@@ -412,7 +415,11 @@ export function contarUsoHerramienta(
     herramienta_id: string,
     tareas: Tarea[]
 ): number {
-    return tareas.filter((t) => t.herramientas_ai.includes(herramienta_id)).length;
+    return tareas.filter((t) => {
+        // Asegurarse de que herramientas_ai sea un array antes de usar includes
+        const herramientasAi = Array.isArray(t.herramientas_ai) ? t.herramientas_ai : [];
+        return herramientasAi.includes(herramienta_id);
+    }).length;
 }
 
 /**
@@ -425,7 +432,9 @@ export function obtenerProyectosHerramienta(
     const proyectos = new Set<string>();
 
     tareas.forEach((tarea) => {
-        if (tarea.herramientas_ai.includes(herramienta_id)) {
+        // Asegurarse de que herramientas_ai sea un array antes de usar includes
+        const herramientasAi = Array.isArray(tarea.herramientas_ai) ? tarea.herramientas_ai : [];
+        if (herramientasAi.includes(herramienta_id)) {
             proyectos.add(tarea.proyecto_id);
         }
     });
@@ -638,33 +647,28 @@ export const formulas = {
     actualizarProyectoConRollups,
     calcularSaludProyecto,
     calcularEficienciaPresupuesto,
-
     // Tareas
     calcularProgresoSubtareas,
     calcularEficienciaTiempo,
     calcularCostoAITarea,
     actualizarTareaConRollups,
     verificarDependenciasBloqueadas,
-
     // Activos
     calcularEspacioTotal,
     calcularEspacioEnGB,
     agruparActivosPorTipo,
     obtenerActivosMasUsados,
-
     // Finanzas
     calcularGastosPorCategoria,
     calcularProyeccionMensual,
     calcularBurnRate,
     calcularRunway,
-
     // AI
     contarUsoHerramienta,
     obtenerProyectosHerramienta,
     calcularGastoTotalHerramienta,
     actualizarHerramientaConRollups,
     obtenerHerramientaMasUsada,
-
     // Globales
     generarResumenFinanciero,
     calcularTendenciaProgreso,

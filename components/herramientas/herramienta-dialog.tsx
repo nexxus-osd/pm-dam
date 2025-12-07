@@ -9,14 +9,10 @@ import { createHerramientaAIAction, updateHerramientaAIAction } from '@/app/acti
 
 interface HerramientaDialogProps {
   herramienta?: any;
-  onHerramientaCreada?: () => void;
-  onHerramientaActualizada?: () => void;
 }
 
 export function HerramientaDialog({ 
-  herramienta, 
-  onHerramientaCreada,
-  onHerramientaActualizada
+  herramienta 
 }: HerramientaDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,15 +28,9 @@ export function HerramientaDialog({
       if (herramienta) {
         // Actualizar herramienta existente
         result = await updateHerramientaAIAction(herramienta.id, data);
-        if (result.success && onHerramientaActualizada) {
-          onHerramientaActualizada();
-        }
       } else {
         // Crear nueva herramienta
         result = await createHerramientaAIAction(data);
-        if (result.success && onHerramientaCreada) {
-          onHerramientaCreada();
-        }
       }
       
       if (result.success) {

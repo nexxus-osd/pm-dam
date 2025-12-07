@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Calendar, Clock, MapPin, Users, Plus } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Plus, Edit3 } from 'lucide-react';
 import { 
   Select, 
   SelectContent, 
@@ -15,14 +15,35 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 
-interface EventoDialogProps {
-  onEventoCreado?: () => void;
+interface Event {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  attendees: number;
+  type: string;
+  description: string;
 }
 
-export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
+interface EventoDialogProps {
+  evento?: Event;
+  onEventoCreado?: (nuevoEvento: Event) => void;
+  onEventoActualizado?: (eventoActualizado: Event) => void;
+}
+
+export function EventoDialog({ evento, onEventoCreado, onEventoActualizado }: EventoDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [titulo, setTitulo] = useState(evento?.title || '');
+  const [fecha, setFecha] = useState(evento?.date || '');
+  const [horaInicio, setHoraInicio] = useState(evento?.time || '');
+  const [ubicacion, setUbicacion] = useState(evento?.location || '');
+  const [tipo, setTipo] = useState(evento?.type || '');
+  const [descripcion, setDescripcion] = useState(evento?.description || '');
+  const [asistentes, setAsistentes] = useState(evento?.attendees.toString() || '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +54,36 @@ export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
       // Simular llamada a API
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Generar ID de forma segura para evitar problemas de hidratación
+      let eventId: string;
+      if (evento?.id) {
+        eventId = evento.id;
+      } else if (typeof window !== 'undefined') {
+        // Solo generar ID aleatorio en el cliente
+        eventId = Math.random().toString(36).substr(2, 9);
+      } else {
+        // En el servidor, usar un placeholder
+        eventId = 'temp-event-id';
+      }
+      
+      const eventData: Event = {
+        id: eventId,
+        title: titulo,
+        date: fecha,
+        time: horaInicio,
+        location: ubicacion,
+        attendees: parseInt(asistentes) || 0,
+        type: tipo,
+        description: descripcion
+      };
+      
       // Cerrar diálogo y llamar callback
       setOpen(false);
-      if (onEventoCreado) onEventoCreado();
+      if (evento && onEventoActualizado) {
+        onEventoActualizado(eventData);
+      } else if (!evento && onEventoCreado) {
+        onEventoCreado(eventData);
+      }
     } catch (err) {
       setError('Error al crear el evento');
       console.error(err);
@@ -47,16 +95,22 @@ export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nuevo Evento
-        </Button>
+        {evento ? (
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Edit3 className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nuevo Evento
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Crear Nuevo Evento
+            {evento ? 'Editar Evento' : 'Crear Nuevo Evento'}
           </DialogTitle>
         </DialogHeader>
         
@@ -71,6 +125,8 @@ export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
             <Label htmlFor="titulo">Título *</Label>
             <Input
               id="titulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
               placeholder="Título del evento"
               required
             />
@@ -81,6 +137,8 @@ export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
             <Input
               id="fecha"
               type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
               required
             />
           </div>
@@ -93,18 +151,24 @@ export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
                 <Input
                   id="horaInicio"
                   type="time"
+                  value={horaInicio}
+                  onChange={(e) => setHoraInicio(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
             
             <div>
-              <Label htmlFor="horaFin">Hora de fin</Label>
+              <Label htmlFor="asistentes">Asistentes</Label>
               <div className="relative">
-                <Clock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="horaFin"
-                  type="time"
+                  id="asistentes"
+                  type="number"
+                  min="1"
+                  value={asistentes}
+                  onChange={(e) => setAsistentes(e.target.value)}
+                  placeholder="Número de asistentes"
                   className="pl-10"
                 />
               </div>
@@ -117,6 +181,8 @@ export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
               <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="ubicacion"
+                value={ubicacion}
+                onChange={(e) => setUbicacion(e.target.value)}
                 placeholder="Ubicación del evento"
                 className="pl-10"
               />
@@ -125,7 +191,7 @@ export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
           
           <div>
             <Label htmlFor="tipo">Tipo de evento</Label>
-            <Select>
+            <Select value={tipo} onValueChange={setTipo}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar tipo" />
               </SelectTrigger>
@@ -143,23 +209,11 @@ export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
             <Label htmlFor="descripcion">Descripción</Label>
             <Textarea
               id="descripcion"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
               placeholder="Descripción del evento"
               rows={3}
             />
-          </div>
-          
-          <div>
-            <Label htmlFor="asistentes">Asistentes</Label>
-            <div className="relative">
-              <Users className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="asistentes"
-                type="number"
-                min="1"
-                placeholder="Número de asistentes"
-                className="pl-10"
-              />
-            </div>
           </div>
           
           <div className="flex justify-end gap-2 pt-4">
@@ -167,7 +221,7 @@ export function EventoDialog({ onEventoCreado }: EventoDialogProps) {
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Creando...' : 'Crear Evento'}
+              {isLoading ? 'Guardando...' : (evento ? 'Actualizar' : 'Crear Evento')}
             </Button>
           </div>
         </form>

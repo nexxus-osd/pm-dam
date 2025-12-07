@@ -15,9 +15,10 @@ const transformTarea = (t: any): any => {
     if (!t) return null;
     return {
         ...t,
-        etiquetas: parseJsonArray(t.etiquetas),
-        checklist: parseJsonArray(t.checklist),
-        archivos_adjuntos: parseJsonArray(t.archivos_adjuntos),
+        etiquetas: Array.isArray(t.etiquetas) ? t.etiquetas : parseJsonArray(t.etiquetas),
+        checklist: Array.isArray(t.checklist) ? t.checklist : parseJsonArray(t.checklist),
+        archivos_adjuntos: Array.isArray(t.archivos_adjuntos) ? t.archivos_adjuntos : parseJsonArray(t.archivos_adjuntos),
+        // Las relaciones se manejan por separado en el servicio
     };
 };
 
@@ -28,9 +29,9 @@ export class TareaService {
     static async create(data: CreateTareaInput): Promise<Tarea> {
         const createData: any = {
             ...data,
-            etiquetas: JSON.stringify(data.etiquetas || []),
-            checklist: JSON.stringify(data.checklist || []),
-            archivos_adjuntos: JSON.stringify(data.archivos_adjuntos || []),
+            etiquetas: JSON.stringify(Array.isArray(data.etiquetas) ? data.etiquetas : []),
+            checklist: JSON.stringify(Array.isArray(data.checklist) ? data.checklist : []),
+            archivos_adjuntos: JSON.stringify(Array.isArray(data.archivos_adjuntos) ? data.archivos_adjuntos : []),
             // Inicializar campos calculados
             total_subtareas: 0,
             subtareas_completadas: 0,
@@ -204,9 +205,9 @@ export class TareaService {
         }
 
         const updateData: any = { ...data };
-        if (data.etiquetas) updateData.etiquetas = JSON.stringify(data.etiquetas);
-        if (data.checklist) updateData.checklist = JSON.stringify(data.checklist);
-        if (data.archivos_adjuntos) updateData.archivos_adjuntos = JSON.stringify(data.archivos_adjuntos);
+        if ('etiquetas' in data) updateData.etiquetas = JSON.stringify(Array.isArray(data.etiquetas) ? data.etiquetas : []);
+        if ('checklist' in data) updateData.checklist = JSON.stringify(Array.isArray(data.checklist) ? data.checklist : []);
+        if ('archivos_adjuntos' in data) updateData.archivos_adjuntos = JSON.stringify(Array.isArray(data.archivos_adjuntos) ? data.archivos_adjuntos : []);
 
         const tarea = await prisma.tarea.update({
             where: { id },

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma';
+import { generateId } from '@/lib/utils'; // Importar la función segura de generación de IDs
 
 // Definir el tipo para las notas
 interface Nota {
@@ -50,7 +51,8 @@ export async function getNotasAction(): Promise<{ success: boolean; data?: Nota[
 
 export async function createNotaAction(data: { titulo: string; contenido: string; color: string }): Promise<{ success: boolean; data?: Nota; error?: string }> {
   try {
-    const id = Date.now().toString();
+    // Usar una función segura para generar IDs
+    const id = generateId(); // Esta función ya maneja la generación segura de IDs
     const createdAt = new Date();
     
     // Insertar nueva nota

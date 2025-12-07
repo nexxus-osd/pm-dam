@@ -17,8 +17,68 @@ import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 
 interface HerramientaFormProps {
-  initialData?: any;
-  onSubmit: (data: any) => void;
+  initialData?: Partial<{
+    nombre: string;
+    descripcion: string;
+    url: string;
+    logo_url: string;
+    url_documentacion: string;
+    tipo_precio: string;
+    costo_mensual: string;
+    costo_anual: string;
+    costo_por_uso: string;
+    unidad_uso: string;
+    moneda: string;
+    plan_actual: string;
+    fecha_suscripcion: string;
+    fecha_renovacion: string;
+    estado_suscripcion: string;
+    caracteristicas: string[];
+    limitaciones: string[];
+    casos_uso: string[];
+    rating: string;
+    reviews: string;
+    notas: string;
+    tiene_api: boolean;
+    url_api: string;
+    api_key: string;
+    favorita: boolean;
+    activa: boolean;
+    tiempo_ahorrado_estimado: string;
+    productividad_ganada: string;
+    categoria?: string[];
+  }>;
+  onSubmit: (data: Partial<{
+    nombre: string;
+    descripcion: string;
+    url: string;
+    logo_url: string;
+    url_documentacion: string;
+    tipo_precio: string;
+    costo_mensual: number;
+    costo_anual: number;
+    costo_por_uso: number;
+    unidad_uso: string;
+    moneda: string;
+    plan_actual: string;
+    fecha_suscripcion: string;
+    fecha_renovacion: string;
+    estado_suscripcion: string;
+    caracteristicas: string[];
+    limitaciones: string[];
+    casos_uso: string[];
+    rating: number;
+    reviews: string;
+    notas: string;
+    tiene_api: boolean;
+    url_api: string;
+    api_key: string;
+    favorita: boolean;
+    activa: boolean;
+    tiempo_ahorrado_estimado: number;
+    productividad_ganada: number;
+    categoria?: string[];
+  }> & { categoria: string[] }) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -80,7 +140,7 @@ export function HerramientaForm({
   const [nuevaLimitacion, setNuevaLimitacion] = useState('');
   const [nuevoCasoUso, setNuevoCasoUso] = useState('');
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: keyof typeof formData, value: string | boolean | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

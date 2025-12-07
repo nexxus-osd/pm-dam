@@ -1,9 +1,22 @@
-'use server'
+'use server';
 
 import { revalidatePath } from 'next/cache';
 import { ProyectoService } from '@/lib/services/proyecto.service';
 import { CreateProyectoSchema, UpdateProyectoSchema, type CreateProyectoInput } from '@/lib/validations/proyecto';
 import prisma from '@/lib/prisma';
+
+export async function getProyectoByIdAction(id: string) {
+  try {
+    const proyecto = await ProyectoService.getById(id);
+    return { success: true, data: proyecto };
+  } catch (error) {
+    console.error('Error al obtener proyecto:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Error desconocido al obtener el proyecto' 
+    };
+  }
+}
 
 export async function createProyectoAction(data: any): Promise<{ success: boolean; error?: string }> {
     try {

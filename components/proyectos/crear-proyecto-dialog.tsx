@@ -18,6 +18,12 @@ export function CrearProyectoDialog() {
     const [isLoading, setIsLoading] = useState(false);
 
     // Valores por defecto
+    const defaultFechaInicio = new Date();
+    // Calcular la fecha de deadline de forma segura para evitar problemas de hidratación
+    const defaultFechaDeadline = typeof window !== 'undefined' 
+        ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // +1 semana en el cliente
+        : defaultFechaInicio; // En el servidor, usar la misma fecha que inicio
+
     const { register, handleSubmit, formState: { errors }, reset } = useForm<CreateProyectoFormInput>({
         resolver: zodResolver(CreateProyectoFormSchema) as any,
         defaultValues: {
@@ -27,8 +33,8 @@ export function CrearProyectoDialog() {
             presupuesto_asignado: 0,
             estado: 'PLANEANDO',
             prioridad: 'MEDIA',
-            fecha_inicio: new Date(),
-            fecha_deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +1 semana
+            fecha_inicio: defaultFechaInicio,
+            fecha_deadline: defaultFechaDeadline,
             etiquetas: [],
         }
     });

@@ -3,6 +3,25 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CreditCard, Plus, ArrowUpRight, ArrowDownLeft, DollarSign } from 'lucide-react';
 
+// Función auxiliar para formatear números de forma segura
+const formatNumber = (num: number): string => {
+  // En el servidor, simplemente convertir a string
+  return num.toString();
+};
+
+// Función auxiliar para formatear fechas de forma segura
+const formatDate = (dateValue: Date | string | undefined): string => {
+  // En el servidor, devolver una representación simple de la fecha
+  if (!dateValue) return '-';
+  try {
+    const date = new Date(dateValue);
+    const formattedDate = date.toISOString().split('T')[0];
+    return formattedDate || '-';
+  } catch {
+    return '-';
+  }
+};
+
 export default async function FinanzasPage() {
     const { transacciones } = await FinanzaService.list({ page: 1, limit: 50 });
     const resumen = await FinanzaService.obtenerResumenGlobal();
@@ -27,7 +46,7 @@ export default async function FinanzasPage() {
                         <div className="text-sm font-medium">Presupuesto Total</div>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <div className="text-2xl font-bold">${resumen.presupuesto_total.toLocaleString()}</div>
+                    <div className="text-2xl font-bold">${formatNumber(resumen.presupuesto_total)}</div>
                     <p className="text-xs text-muted-foreground">Asignado a proyectos activos</p>
                 </div>
                 <div className="rounded-xl border bg-card text-card-foreground shadow p-6">
@@ -35,7 +54,7 @@ export default async function FinanzasPage() {
                         <div className="text-sm font-medium">Ingresos Totales</div>
                         <ArrowUpRight className="h-4 w-4 text-green-500" />
                     </div>
-                    <div className="text-2xl font-bold text-green-600">${resumen.ingresos_totales.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-green-600">${formatNumber(resumen.ingresos_totales)}</div>
                     <p className="text-xs text-muted-foreground">+20.1% del mes pasado</p>
                 </div>
                 <div className="rounded-xl border bg-card text-card-foreground shadow p-6">
@@ -43,7 +62,7 @@ export default async function FinanzasPage() {
                         <div className="text-sm font-medium">Gastos Totales</div>
                         <ArrowDownLeft className="h-4 w-4 text-red-500" />
                     </div>
-                    <div className="text-2xl font-bold text-red-600">${resumen.gastos_totales.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-red-600">${formatNumber(resumen.gastos_totales)}</div>
                     <p className="text-xs text-muted-foreground">Acumulado anual</p>
                 </div>
                 <div className="rounded-xl border bg-card text-card-foreground shadow p-6">
@@ -81,8 +100,7 @@ export default async function FinanzasPage() {
                                 {transacciones.map((t: any) => (
                                     <tr key={t.id} className="border-b transition-colors hover:bg-muted/50">
                                         <td className="p-4 align-middle">
-                                            {t.
-                                                fecha_transaccion ? new Date(t.fecha_transaccion).toLocaleDateString() : '-'}
+                                            {formatDate(t.fecha_transaccion)}
                                         </td>
                                         <td className="p-4 align-middle font-medium">{t.concepto}</td>
                                         <td className="p-4 align-middle text-muted-foreground">{t.proyecto?.nombre || '-'}</td>
@@ -93,7 +111,7 @@ export default async function FinanzasPage() {
                                             </Badge>
                                         </td>
                                         <td className={`p-4 align-middle text-right font-medium ${t.tipo_transaccion === 'INGRESO' ? 'text-green-600' : ''}`}>
-                                            {t.tipo_transaccion === 'GASTO' ? '-' : '+'}${Number(t.monto).toLocaleString()}
+                                            {t.tipo_transaccion === 'GASTO' ? '-' : '+'}${formatNumber(Number(t.monto))}
                                         </td>
                                     </tr>
                                 ))}
